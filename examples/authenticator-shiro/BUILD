@@ -1,23 +1,12 @@
-load("//liferay:liferay.bzl", "liferay_jar")
+load("//liferay:liferay.bzl", "liferay_application")
 
-java_library(
-    name = "authenticator_shiro_lib",
-    srcs = (glob(["src/main/java/**/*.java"])),
-    deps = [
-        "@portal_kernel//jar",
-        "@shiro_core//jar",
-        "@osgi_service_component_annotations//jar",
-    ],
-)
-
-liferay_jar(
+liferay_application(
     name = "authenticator-shiro",
-    bnd = "bnd.bnd",
-    classes = ":authenticator_shiro_lib",
+    srcs = (glob(["src/main/java/**/*.java"])),
+    resources = (glob(["src/main/resources/*"])),
     deps = [
-        "@portal_kernel//jar",
-        "@shiro_core//jar",
-        "@osgi_service_component_annotations//jar",
+        "//third_party:portal_kernel_artifact",
+        "//third_party:shiro_core_artifact",
+        "//third_party:osgi_service_component_annotations_artifact",
     ],
 )
-
