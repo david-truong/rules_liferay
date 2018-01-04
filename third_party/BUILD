@@ -6,8 +6,28 @@ java_import(
 )
 
 java_import(
+    name = "css_builder_artifact",
+    jars = ["com.liferay.css.builder/com.liferay.css.builder-2.1.0.jar"],
+)
+
+java_import(
+    name = "css_common_artifact",
+    jars = ["com.liferay.frontend.css.common/com.liferay.frontend.css.common-2.0.4.jar"],
+)
+
+java_import(
     name = "osgi_bundle_builder_artifact",
     jars = ["com.liferay.osgi.bundle.builder/com.liferay.osgi.bundle.builder-1.0.1.jar"],
+)
+
+java_import(
+    name = "osgi_core_artifact",
+    jars = ["org.osgi.core/org.osgi.core-6.0.0.jar"]
+)
+
+java_import(
+    name = "osgi_service_component_annotations_artifact",
+    jars = ["org.osgi.service.component.annotations/org.osgi.service.component.annotations-1.3.0.jar"]
 )
 
 java_import(
@@ -31,36 +51,31 @@ java_import(
 )
 
 java_import(
-    name = "sass_compiler_api_artifact",
-    jars = ["com.liferay.sass.compiler.api/com.liferay.sass.compiler.api-2.0.1.jar"],
+    name = "portlet_api_artifact",
+    jars = ["portlet-api/portlet-api-2.0.jar"]
 )
 
 java_import(
-    name = "sass_compiler_jni_artifact",
-    jars = ["com.liferay.sass.compiler.jni/com.liferay.sass.compiler.jni-2.0.8.jar"],
+    name = "servlet_api_artifact",
+    jars = ["javax.servlet-api/javax.servlet-api-3.0.1.jar"]
 )
 
 java_import(
-	name = "servlet_api_artifact",
-	jars = ["javax.servlet-api/javax.servlet-api-3.0.1.jar"]
+    name = "shiro_core_artifact",
+    jars = ["shiro-core/shiro-core-1.1.0.jar"]
 )
 
 java_import(
-	name = "osgi_service_component_annotations_artifact",
-	jars = ["org.osgi.service.component.annotations/org.osgi.service.component.annotations-1.3.0.jar"]
+    name = "styled_theme_artifact",
+    jars = ["com.liferay.frontend.theme.styled/com.liferay.frontend.theme.styled-2.1.1.jar"],
 )
 
 java_import(
-	name = "osgi_core_artifact",
-	jars = ["org.osgi.core/org.osgi.core-6.0.0.jar"]
+    name = "theme_builder_artifact",
+    jars = ["com.liferay.portal.tools.theme.builder/com.liferay.portal.tools.theme.builder-1.1.4.jar"],
 )
 
 java_import(
-	name = "portlet_api_artifact",
-	jars = ["portlet-api/portlet-api-2.0.jar"]
-)
-
-java_import(
-	name = "shiro_core_artifact",
-	jars = ["shiro-core/shiro-core-1.1.0.jar"]
+    name = "unstyled_theme_artifact",
+    jars = ["com.liferay.frontend.theme.unstyled/com.liferay.frontend.theme.unstyled-2.2.8.jar"],
 )

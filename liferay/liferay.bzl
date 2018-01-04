@@ -18,53 +18,54 @@ Bazel.
 """
 
 def _jar_impl(ctx):
-  all_deps = ''
+    all_deps = ''
 
-  inputs = []
+    for dep in ctx.files.deps:
+        all_deps += dep.path + ","
 
-  for dep in ctx.files.deps:
-      all_deps += dep.path + ","
-      inputs.append(dep)
+    all_resources = ''
 
-  args = ctx.actions.args()
-  args.add("--classes-dir")
-  args.add(ctx.file.classes.path)
-  args.add("--classpath")
-  args.add(all_deps)
-  args.add("--bnd-file")
-  args.add(ctx.file.bnd.path)
-  args.add("--output")
-  args.add(ctx.outputs.liferay_jar.path)
-  args.add("jar")
+    for resource in ctx.files.resources:
+        all_resources += resource.path + ","
 
-  inputs.append(ctx.file.classes)
-  inputs.append(ctx.file.bnd)
+    args = ctx.actions.args()
+    args.add(all_resources)
+    args.add(ctx.file._css_common)
+    args.add(ctx.file.classes.path)
+    args.add(all_deps)
+    args.add(ctx.file.bnd.path)
+    args.add(ctx.outputs.liferay_jar.path)
 
-  ctx.actions.run(
-    arguments = [args],
-    executable = ctx.executable._obb,
-    mnemonic = "LiferayJar",
-    inputs = inputs,
-    outputs = [ctx.outputs.liferay_jar],
-    progress_message = "Liferay is building an osgi jar ",
-    use_default_shell_env = True,
-  )
+    ctx.actions.run(
+        arguments = [args],
+        executable = ctx.executable._osgi_bundle_builder,
+        mnemonic = "LiferayJar",
+        inputs = ctx.files.deps + ctx.files.resources + [ctx.file.bnd, ctx.file.classes, ctx.file._css_common],
+        outputs = [ctx.outputs.liferay_jar],
+        progress_message = "Liferay is building an osgi jar ",
+        use_default_shell_env = True,
+    )
 
-  deps =[]
+    deps =[]
 
-  if java_common.provider in ctx.attr.classes:
-    deps.append(ctx.attr.classes[java_common.provider])
+    if java_common.provider in ctx.attr.classes:
+        deps.append(ctx.attr.classes[java_common.provider])
 
-  deps_provider = java_common.merge(deps)
+    deps_provider = java_common.merge(deps)
 
-  return struct(providers = [deps_provider])
+    return struct(providers = [deps_provider])
 
 _jar = rule(
     attrs = {
         "bnd": attr.label(allow_single_file = FileType([".bnd"])),
         "classes": attr.label(allow_single_file = FileType([".jar"])),
         "deps": attr.label_list(allow_files = FileType([".jar"])),
-        "_obb": attr.label(
+        "resources": attr.label_list(allow_files = True),
+        "_css_common": attr.label(
+            single_file = True,
+            default = Label("//third_party:css_common_artifact"),
+        ),
+        "_osgi_bundle_builder": attr.label(
             default = Label("//liferay/tools:osgi_bundle_builder"),
             executable = True,
             cfg = "target",
@@ -73,115 +74,73 @@ _jar = rule(
     },
     implementation = _jar_impl,
     outputs = {
-        "liferay_jar": "%{name}-liferay.jar",
+        "liferay_jar": "%{name}.jar",
     },
   )
 
 def liferay_application(name, srcs, resources = [], bnd = "bnd.bnd", deps = []):
-  native.java_library(
-    name = name + "-compiled",
-    srcs = srcs,
-    resources = resources,
-    deps = deps,
-  ) 
+    native.java_library(
+        name = name + "-compiled",
+        srcs = srcs,
+        deps = deps,
+    ) 
 
-  _jar(
-    name = name,
-    bnd = bnd,
-    classes = ":" + name + "-compiled",
-    deps = deps,
-  )
-
-
-SASS_FILETYPES = FileType([
-    ".sass",
-    ".scss",
-])
-
-def collect_transitive_sources(ctx):
-    source_files = depset(order="postorder")
-
-    for dep in ctx.attr.deps:
-        source_files += dep.transitive_sass_files
-    
-    return source_files
-
-def _sass_library_impl(ctx):
-    transitive_sources = collect_transitive_sources(ctx)
-    transitive_sources += SASS_FILETYPES.filter(ctx.files.srcs)
-
-    return struct(
-        files = depset(),
-        transitive_sass_files = transitive_sources)
-
-def _sass_binary_impl(ctx):
-    css_filename = ctx.file.src.basename[:-len(ctx.file.src.extension)]
-
-    css_file = ctx.actions.declare_file(css_filename + "css", sibling = ctx.file.src)
-
-    css_map_file = ctx.actions.declare_file(css_file.basename + ".map", sibling = ctx.file.src)
-
-    sass_compiler = ctx.executable._sass_compiler
-    
-    options = [
-        "--file",
-        ctx.file.src.path,
-        "--sourcemap",
-        "--output",
-        css_file.path,
-        "--sourcemap-output",
-        css_map_file.path,
-    ]
-
-    transitive_sources = collect_transitive_sources(ctx)
-
-    imports = ""
-
-    for src in transitive_sources:
-      imports += src.path[:-len(src.basename)] + ":"
-
-    options += ["--include-dir", imports]
-
-    ctx.actions.run(
-        inputs = [ctx.file.src] + list(transitive_sources),
-        executable = sass_compiler,
-        arguments = options,
-        mnemonic = "SassCompiler",
-        outputs = [css_file, css_map_file],
+    _jar(
+        name = name,
+        bnd = bnd,
+        resources = resources,
+        classes = ":" + name + "-compiled",
+        deps = deps,
     )
 
-    return DefaultInfo(files=depset([css_file, css_map_file]))
+def _liferay_theme_impl(ctx):
+    all_srcs = ''
 
-sass_deps_attr = attr.label_list(
-    providers = ["transitive_sass_files"],
-    allow_files = False,
-)
+    for src in ctx.files.srcs:
+      all_srcs += src.path + ","
 
-sass_library = rule(
+    theme_builder_args = ctx.actions.args()
+    theme_builder_args.add(all_srcs)
+    theme_builder_args.add(ctx.attr.parent_name)
+    theme_builder_args.add(ctx.file.parent_theme)
+    theme_builder_args.add(ctx.file._unstyled_theme)
+    theme_builder_args.add(ctx.file._css_common)
+    theme_builder_args.add(ctx.outputs.liferay_theme.path)
+
+    ctx.actions.run(
+        arguments = [theme_builder_args],
+        executable = ctx.executable._theme_builder,
+        inputs = ctx.files.srcs + [ctx.file.parent_theme, ctx.file._unstyled_theme, ctx.file._css_common],
+        mnemonic = "BuildTheme",
+        outputs = [ctx.outputs.liferay_theme],
+        progress_message = "Liferay is building your theme",
+        use_default_shell_env = True,
+    )
+
+liferay_theme = rule(
     attrs = {
-        "srcs": attr.label_list(
-            allow_files = SASS_FILETYPES,
-            non_empty = True,
-            mandatory = True,
-        ),
-        "deps": sass_deps_attr,
-    },
-    implementation = _sass_library_impl,
-)
-
-sass_binary = rule(
-    attrs = {
-        "src": attr.label(
-            allow_files = SASS_FILETYPES,
-            mandatory = True,
+        "parent_name": attr.string(default = "_styled"),
+        "parent_theme": attr.label(
             single_file = True,
+            default = Label("//third_party:styled_theme_artifact"),
         ),
-        "deps": sass_deps_attr,
-        "_sass_compiler": attr.label(
-            default = Label("//liferay/tools:sass_compiler"),
+        "srcs": attr.label_list(allow_files = True),
+        "_css_common": attr.label(
+            single_file = True,
+            default = Label("//third_party:css_common_artifact"),
+        ),
+        "_theme_builder": attr.label(
+            default = Label("//liferay/tools:theme_builder"),
             executable = True,
-            cfg = "host",
+            cfg = "target",
+        ),
+        "_unstyled_theme": attr.label(
+            single_file = True,
+            default = Label("//third_party:unstyled_theme_artifact"),
         ),
     },
-    implementation = _sass_binary_impl,
-)
+    implementation = _liferay_theme_impl,
+    outputs = {
+        "liferay_theme": "%{name}.war"
+    },
+  )
