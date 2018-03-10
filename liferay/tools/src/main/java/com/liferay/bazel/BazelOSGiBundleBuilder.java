@@ -6,8 +6,9 @@ import com.liferay.osgi.bundle.builder.OSGiBundleBuilderArgs;
 import com.liferay.osgi.bundle.builder.commands.JarCommand;
 
 import java.io.File;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -17,12 +18,12 @@ public class BazelOSGiBundleBuilder {
         String resources = args[0];
         String cssCommonPath = args[1];
 
-        File resourcesDir = _getBaseDir(resources);
+        File baseDir = _getBaseDir(resources);
 
-        if (resourcesDir != null) {
+        if (baseDir != null) {
             CSSBuilderArgs cssBuilderArgs = new CSSBuilderArgs();
 
-            cssBuilderArgs.setBaseDir(resourcesDir.getCanonicalFile());
+            cssBuilderArgs.setBaseDir(baseDir.getCanonicalFile());
             cssBuilderArgs.setImportDir(new File(cssCommonPath));
             cssBuilderArgs.setOutputDirName("./");
 
@@ -39,14 +40,19 @@ public class BazelOSGiBundleBuilder {
         File outputFile = new File(outputFileName);
 
         OSGiBundleBuilderArgs osgiBundleBuilderArgs =
-            new OSGiBundleBuilderArgs();
+                new OSGiBundleBuilderArgs();
 
+        File bndFile = new File(bndPath);
+
+        osgiBundleBuilderArgs.setBaseDir(bndFile.getParentFile());
         osgiBundleBuilderArgs.setClassesDir(new File(classesLib));
         osgiBundleBuilderArgs.setClasspath(_getClasspath(classpath.split(",")));
-        osgiBundleBuilderArgs.setBndFile(new File(bndPath));
-        osgiBundleBuilderArgs.setOutput(outputFile);
+        osgiBundleBuilderArgs.setBndFile(bndFile);
+        osgiBundleBuilderArgs.setOutputFile(outputFile);
 
-        if (resourcesDir != null) {
+        if (baseDir != null) {
+            File resourcesDir = new File(baseDir, "main/resources");
+
             osgiBundleBuilderArgs.setResourcesDir(resourcesDir);
         }
 
@@ -62,25 +68,13 @@ public class BazelOSGiBundleBuilder {
 
         String[] fileNames = sourceFiles.split(",");
 
-        Path diffsPath = null;
+        Path basePath = Paths.get(fileNames[0]);
 
-        for (String fileName : fileNames) {
-
-            Path path = Paths.get(fileName);
-
-            Path parentPath = path.getParent();
-
-            if (diffsPath == null) {
-                diffsPath = parentPath;
-            }
-            else {
-                while(!parentPath.startsWith(diffsPath)) {
-                    diffsPath = diffsPath.getParent();
-                }
-            }
+        while (!basePath.endsWith("src")) {
+            basePath = basePath.getParent();
         }
 
-        return diffsPath.toFile();
+        return basePath.toFile();
     }
 
     private static List<File> _getClasspath(String[] fileNames) {
@@ -91,5 +85,32 @@ public class BazelOSGiBundleBuilder {
         ).map(
             path -> path.toFile()
         ).collect(Collectors.toList());
+    }
+
+    private static void copyDirectory(final Path source, final Path target)
+            throws IOException {
+
+        Files.walkFileTree(
+            source,
+            new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(
+                        Path path, BasicFileAttributes attrs)
+                    throws IOException {
+
+                    if (attrs.isDirectory()) {
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    Path newPath = target.resolve(source.relativize(path));
+
+                    Files.createDirectories(newPath.getParent());
+
+                    Files.copy(
+                        path, newPath, StandardCopyOption.REPLACE_EXISTING);
+
+                    return FileVisitResult.CONTINUE;
+                }
+            });
     }
 }

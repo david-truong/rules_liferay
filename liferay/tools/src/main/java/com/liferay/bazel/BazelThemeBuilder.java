@@ -6,9 +6,11 @@ import com.liferay.portal.tools.theme.builder.ThemeBuilder;
 import com.liferay.portal.tools.theme.builder.ThemeBuilderArgs;
 
 import java.io.*;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -44,6 +46,7 @@ public class BazelThemeBuilder {
         cssBuilderArgs.setBaseDir(tempDir);
         cssBuilderArgs.setImportDir(new File(cssCommonPath));
         cssBuilderArgs.setOutputDirName("./");
+        cssBuilderArgs.setPrecision(5);
 
         CSSBuilder cssBuilder = new CSSBuilder(cssBuilderArgs);
 
@@ -83,45 +86,31 @@ public class BazelThemeBuilder {
     private static void _writeOutputFile(File inputDir, File outputFile)
         throws IOException {
 
-        try (FileOutputStream fos = new FileOutputStream(outputFile);
-             ZipOutputStream zipOut = new ZipOutputStream(fos)) {
+        Path outputPath = Files.createFile(outputFile.toPath());
 
-            _zipFile(inputDir, "", zipOut);
-        }
-    }
+        try (ZipOutputStream zipOutputStream = new ZipOutputStream(
+                Files.newOutputStream(outputPath))) {
 
-    private static void _zipFile(
-            File inputFile, String fileName, ZipOutputStream zipOutputStream)
-        throws IOException {
+            Path inputPath = inputDir.toPath();
 
-        if (inputFile.isHidden()) {
-            return;
-        }
+            Files.walk(inputPath)
+                .filter(path -> !Files.isDirectory(path))
+                .forEach(path -> {
+                    Path relativePath = inputPath.relativize(path);
 
-        if (inputFile.isDirectory()) {
-            File[] children = inputFile.listFiles();
+                    ZipEntry zipEntry =
+                            new ZipEntry(relativePath.toString());
+                    try {
+                        zipOutputStream.putNextEntry(zipEntry);
 
-            for (File childFile : children) {
-                _zipFile(
-                    childFile, fileName + "/" + childFile.getName(),
-                    zipOutputStream);
-            }
+                        Files.copy(path, zipOutputStream);
 
-            return;
-        }
-
-        try (FileInputStream fis = new FileInputStream(inputFile)) {
-            ZipEntry zipEntry = new ZipEntry(fileName);
-
-            zipOutputStream.putNextEntry(zipEntry);
-
-            byte[] bytes = new byte[1024];
-
-            int length;
-
-            while ((length = fis.read(bytes)) >= 0) {
-                zipOutputStream.write(bytes, 0, length);
-            }
+                        zipOutputStream.closeEntry();
+                    }
+                    catch (IOException e) {
+                        System.err.println(e);
+                    }
+                });
         }
     }
 
