@@ -1,23 +1,8 @@
-package(default_visibility = ["//:__subpackages__"])
+package(default_visibility=["//visibility:public"])
 
 java_import(
     name = "bndlib_artifact",
     jars = ["biz.aQute.bndlib/biz.aQute.bndlib-3.5.0.jar"],
-)
-
-java_import(
-    name = "css_builder_artifact",
-    jars = ["com.liferay.css.builder/com.liferay.css.builder-2.1.0.jar"],
-)
-
-java_import(
-    name = "css_common_artifact",
-    jars = ["com.liferay.frontend.css.common/com.liferay.frontend.css.common-2.0.4.jar"],
-)
-
-java_import(
-    name = "osgi_bundle_builder_artifact",
-    jars = ["com.liferay.osgi.bundle.builder/com.liferay.osgi.bundle.builder-1.0.1.jar"],
 )
 
 java_import(
@@ -63,19 +48,4 @@ java_import(
 java_import(
     name = "shiro_core_artifact",
     jars = ["shiro-core/shiro-core-1.1.0.jar"]
-)
-
-java_import(
-    name = "styled_theme_artifact",
-    jars = ["com.liferay.frontend.theme.styled/com.liferay.frontend.theme.styled-2.1.1.jar"],
-)
-
-java_import(
-    name = "theme_builder_artifact",
-    jars = ["com.liferay.portal.tools.theme.builder/com.liferay.portal.tools.theme.builder-1.1.4.jar"],
-)
-
-java_import(
-    name = "unstyled_theme_artifact",
-    jars = ["com.liferay.frontend.theme.unstyled/com.liferay.frontend.theme.unstyled-2.2.8.jar"],
 )

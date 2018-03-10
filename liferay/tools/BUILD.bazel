@@ -1,0 +1,21 @@
+package(default_visibility=["//visibility:public"])
+
+java_binary(
+    name="osgi_bundle_builder",
+    srcs=["src/main/java/com/liferay/bazel/BazelOSGiBundleBuilder.java"],
+    deps=[
+        "@osgi_bundle_builder_artifact//jar",
+        "@css_builder_artifact//jar",
+    ],
+    main_class="com.liferay.bazel.BazelOSGiBundleBuilder"
+)
+
+java_binary(
+    name="theme_builder",
+    srcs=["src/main/java/com/liferay/bazel/BazelThemeBuilder.java"],
+    deps=[
+      "@theme_builder_artifact//jar",
+      "@css_builder_artifact//jar",
+    ],
+    main_class="com.liferay.bazel.BazelThemeBuilder"
+)
