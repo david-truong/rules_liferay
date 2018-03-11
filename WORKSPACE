@@ -1,4 +1,4 @@
-workspace(name="liferay_workspace")
+workspace(name="rules_liferay")
 
 load("//liferay:liferay.bzl", "liferay_repositories")
 
