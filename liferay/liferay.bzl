@@ -41,8 +41,10 @@ def _jar_impl(ctx):
         arguments=[args],
         executable=ctx.executable._osgi_bundle_builder,
         mnemonic="LiferayJar",
-        inputs=ctx.files.deps + ctx.files.resources + [
-            ctx.file.bnd, ctx.file.classes, ctx.file._css_common],
+        inputs=(
+            ctx.files.deps + ctx.files.resources + ctx.files.package_json +
+            [ctx.file.bnd, ctx.file.classes, ctx.file._css_common]
+        ),
         outputs=[ctx.outputs.liferay_jar],
         progress_message="Liferay is building an osgi jar ",
         use_default_shell_env=True,
@@ -62,6 +64,7 @@ _jar = rule(
         "bnd": attr.label(allow_single_file=FileType([".bnd"])),
         "classes": attr.label(allow_single_file=FileType([".jar"])),
         "deps": attr.label_list(allow_files=FileType([".jar"])),
+        "package_json": attr.label_list(allow_files=True),
         "resources": attr.label_list(allow_files=True),
         "_css_common": attr.label(
             single_file=True,
@@ -81,18 +84,26 @@ _jar = rule(
 
 
 def liferay_application(name, srcs, resources=[], bnd="bnd.bnd", deps=[]):
-    native.java_library(
-        name=name + "-compiled",
-        srcs=srcs,
-        deps=deps,
-    ) 
+    if len(srcs) > 0:
+        native.java_library(
+            name = name + "-compiled",
+            srcs = srcs,
+            deps = deps,
+        )
+    else:
+        native.java_library(
+            name = name + "-compiled",
+            srcs = srcs,
+            runtime_deps = deps,
+        )
 
     _jar(
-        name=name,
-        bnd=bnd,
-        resources=resources,
-        classes=":" + name + "-compiled",
-        deps=deps,
+        name = name,
+        bnd = bnd,
+        resources = resources,
+        classes = ":" + name + "-compiled",
+        deps = deps,
+        package_json = package_json,
     )
 
 
